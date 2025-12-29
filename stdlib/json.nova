@@ -1,0 +1,5 @@
+def dumps(obj: any) -> str:
+    __native__("json.dumps", obj)
+
+def loads(s: str) -> any:
+    __native__("json.loads", s)
