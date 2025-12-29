@@ -1,6 +1,228 @@
-# Nova → Python json
-def dumps(obj: any) -> str:
-    __native__("json.dumps", obj)
+# ============================================
+# json.nova — Pure Nova JSON implementation
+# No native bridge, no imports, no use
+# ============================================
 
+
+# --------------------------------------------
+# Helpers
+# --------------------------------------------
+func is_digit(c: str) -> bool { return c >= "0" and c <= "9" }
+func is_space(c: str) -> bool { return c == " " or c == "\n" or c == "\t" or c == "\r" }
+
+
+# ============================================
+# JSON SERIALIZER (Nova → JSON string)
+# ============================================
+
+def dumps(obj: any) -> str:
+    let t = type(obj)
+
+    if t == "int":
+        return str(obj)
+
+    if t == "float":
+        return str(obj)
+
+    if t == "bool":
+        if obj { return "true" }
+        return "false"
+
+    if t == "null":
+        return "null"
+
+    if t == "str":
+        return dump_string(obj)
+
+    if t == "list":
+        return dump_list(obj)
+
+    if t == "map":
+        return dump_object(obj)
+
+    return "null"  # fallback
+
+
+# String escaping
+def dump_string(s: str) -> str:
+    out = "\""
+    i = 0
+    while i < len(s):
+        let c = s[i]
+
+        if c == "\"":
+            out = out + "\\\""
+        elif c == "\\":
+            out = out + "\\\\"
+        elif c == "\n":
+            out = out + "\\n"
+        else:
+            out = out + c
+
+        i = i + 1
+
+    return out + "\""
+
+
+# List → JSON array
+def dump_list(arr: list) -> str:
+    out = "["
+    i = 0
+    while i < len(arr):
+        out = out + dumps(arr[i])
+        if i < len(arr) - 1:
+            out = out + ","
+        i = i + 1
+    return out + "]"
+
+
+# Map → JSON object
+def dump_object(obj: map) -> str:
+    out = "{"
+    keys = keys(obj)
+    i = 0
+
+    while i < len(keys):
+        let k = keys[i]
+        out = out + dump_string(k) + ":" + dumps(obj[k])
+
+        if i < len(keys) - 1:
+            out = out + ","
+
+        i = i + 1
+
+    return out + "}"
+
+
+# ============================================
+# JSON PARSER (string → Nova value)
+# ============================================
+
+# Entry point
 def loads(s: str) -> any:
-    __native__("json.loads", s)
+    let p = 0
+    return parse_value(s, p)
+
+
+# Skip whitespace
+def skip_ws(s: str, p: int) -> int:
+    while p < len(s) and is_space(s[p]):
+        p = p + 1
+    return p
+
+
+# Parse any JSON value
+def parse_value(s: str, p: int) -> any:
+    p = skip_ws(s, p)
+
+    let c = s[p]
+
+    if c == "\"":
+        return parse_string(s, p)
+
+    if c == "[":
+        return parse_array(s, p)
+
+    if c == "{":
+        return parse_object(s, p)
+
+    if c == "t":
+        return true, p + 4
+
+    if c == "f":
+        return false, p + 5
+
+    if c == "n":
+        return null, p + 4
+
+    return parse_number(s, p)
+
+
+# Parse string
+def parse_string(s: str, p: int) -> any:
+    p = p + 1  # skip "
+    out = ""
+    while p < len(s) and s[p] != "\"":
+        let c = s[p]
+
+        if c == "\\":
+            p = p + 1
+            let esc = s[p]
+            if esc == "n":
+                out = out + "\n"
+            elif esc == "\"":
+                out = out + "\""
+            elif esc == "\\":
+                out = out + "\\"
+            else:
+                out = out + esc
+        else:
+            out = out + c
+
+        p = p + 1
+
+    return out, p + 1
+
+
+# Parse number
+def parse_number(s: str, p: int) -> any:
+    start = p
+
+    if s[p] == "-":
+        p = p + 1
+
+    while p < len(s) and is_digit(s[p]):
+        p = p + 1
+
+    if p < len(s) and s[p] == ".":
+        p = p + 1
+        while p < len(s) and is_digit(s[p]):
+            p = p + 1
+
+    return float(s[start:p]), p
+
+
+# Parse array
+def parse_array(s: str, p: int) -> any:
+    arr = []
+    p = p + 1  # skip [
+
+    p = skip_ws(s, p)
+    if s[p] == "]":
+        return arr, p + 1
+
+    while true:
+        let val, p2 = parse_value(s, p)
+        arr.append(val)
+        p = skip_ws(s, p2)
+
+        if s[p] == "]":
+            return arr, p + 1
+
+        p = p + 1  # skip comma
+
+
+# Parse object
+def parse_object(s: str, p: int) -> any:
+    obj = {}
+    p = p + 1  # skip {
+
+    p = skip_ws(s, p)
+    if s[p] == "}":
+        return obj, p + 1
+
+    while true:
+        let key, p2 = parse_string(s, p)
+        p = skip_ws(s, p2)
+
+        p = p + 1  # skip :
+
+        let val, p3 = parse_value(s, p)
+        obj[key] = val
+
+        p = skip_ws(s, p3)
+
+        if s[p] == "}":
+            return obj, p + 1
+
+        p = p + 1  # skip comma
