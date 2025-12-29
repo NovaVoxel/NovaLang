@@ -1,9 +1,7 @@
 # Nova package builder
-# Creates target/<project>.novar and compiles nova/ → bin/
+# Compiles nova/ → bin/*.nomc and packs into target/<project>.novar
 
-import os
-import tarfile
-import json
+import os, tarfile, json
 from compiler.lexer import tokenize
 from compiler.parser import parse
 from compiler.ir_builder import build_ir
@@ -13,7 +11,6 @@ def build_novar(project_name, source_dir="nova", bin_dir="bin", target_dir="targ
     os.makedirs(bin_dir, exist_ok=True)
     os.makedirs(target_dir, exist_ok=True)
 
-    # Compile all .nova files in source_dir
     compiled_files = []
     for fname in os.listdir(source_dir):
         if fname.endswith(".nova"):
@@ -23,11 +20,10 @@ def build_novar(project_name, source_dir="nova", bin_dir="bin", target_dir="targ
             tokens = list(tokenize(code))
             ast = parse(tokens)
             ir_module = build_ir(ast)
-            obj_path = os.path.join(bin_dir, fname.replace(".nova", ".o"))
-            generate_nomc(ir_module, output=obj_path)
-            compiled_files.append(obj_path)
+            nomc_path = os.path.join(bin_dir, fname.replace(".nova", ".nomc"))
+            generate_nomc(ir_module, output=nomc_path)
+            compiled_files.append(nomc_path)
 
-    # Create manifest
     manifest = {
         "project": {"name": project_name, "version": "0.1.0"},
         "bin": compiled_files
@@ -36,7 +32,6 @@ def build_novar(project_name, source_dir="nova", bin_dir="bin", target_dir="targ
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
 
-    # Package into .novar
     novar_path = os.path.join(target_dir, f"{project_name}.novar")
     with tarfile.open(novar_path, "w") as tar:
         tar.add(bin_dir, arcname="bin")
