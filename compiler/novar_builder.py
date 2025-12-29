@@ -1,4 +1,4 @@
-# Nova package builder
+# Nova package builder with LTO support
 # Compiles nova/ → bin/*.nomc and packs into target/<project>.novar
 
 import os, tarfile, json
@@ -36,5 +36,5 @@ def build_novar(project_name, source_dir="nova", bin_dir="bin", target_dir="targ
     with tarfile.open(novar_path, "w") as tar:
         tar.add(bin_dir, arcname="bin")
 
-    print(f"✅ Built {novar_path}")
+    print(f"✅ Built {novar_path} with LTO")
     return novar_path
