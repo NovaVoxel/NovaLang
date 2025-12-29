@@ -1,0 +1,10 @@
+# Nova → Python threading
+
+def spawn(func):
+    __native__("threading.Thread", target=func).start()
+
+def sleep(ms: int):
+    __native__("time.sleep", ms / 1000.0)
+
+def join(thread):
+    thread.join()
