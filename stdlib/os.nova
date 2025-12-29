@@ -3,14 +3,12 @@
 # Values are injected by the runtime launcher
 # ============================================
 
-# Runtime-injected globals
 var _env: map = {}
 var _platform: str = ""
 var _cwd: str = ""
 var _setenv_func: func(str, str) -> void = null
 
-
-# Called by the runtime to initialize OS bindings
+# Called by runtime
 def __os_init__(
     env: map,
     platform: str,
@@ -22,27 +20,15 @@ def __os_init__(
     _cwd = cwd
     _setenv_func = setenv_func
 
-
-# --------------------------------------------
 # Public API
-# --------------------------------------------
-
-# Get environment variable
 func getenv(key: str) -> str {
     if key in _env { return _env[key] }
     return ""
 }
 
-# Set environment variable
 def setenv(key: str, value: str):
-    if _setenv_func != null {
-        _setenv_func(key, value)
-    }
+    if _setenv_func != null { _setenv_func(key, value) }
     _env[key] = value
 
-
-# Return platform string ("linux", "windows", "darwin", ...)
 func platform() -> str { return _platform }
-
-# Return current working directory
 func cwd() -> str { return _cwd }
