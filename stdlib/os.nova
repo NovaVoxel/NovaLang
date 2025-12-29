@@ -1,6 +1,13 @@
-use std/os
+# Nova → Python os/platform
 
-func main() {
-    print("Running on: " + platform())
-    print("Current dir: " + cwd())
-}
+def getenv(key: str) -> str:
+    __native__("os.getenv", key)
+
+def setenv(key: str, value: str):
+    __native__("os.putenv", key, value)
+
+def platform() -> str:
+    __native__("sys.platform")
+
+def cwd() -> str:
+    __native__("os.getcwd")
