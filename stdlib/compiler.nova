@@ -1,1 +1,79 @@
+# ============================================
+# compiler.nova — Nova Compiler Interface
+# Pure Stdlib API (no implementation)
+# Tools may implement these functions
+# ============================================
+
+# --------------------------------------------
+# Types (informal conventions)
+#
+# CompilerModule:
+#   opaque handle to a compiled module
+#
+# Diagnostics:
+#   list of maps: { "kind": str, "msg": str, "line": int, "col": int }
+# --------------------------------------------
+
+
+# --------------------------------------------
+# Source → Module
+# --------------------------------------------
+
+# Compile Nova source code into a module
+def compile_source(src: str) -> any:
+    # Implemented by host/tool
+    return null
+
+
+# Evaluate a single expression (for REPLs)
+def eval_expr(src: str) -> any:
+    return null
+
+
+# --------------------------------------------
+# Running
+# --------------------------------------------
+
+# Execute a compiled module (calls main)
+def run_module(mod: any) -> int:
+    return -1
+
+
+# --------------------------------------------
+# Introspection
+# --------------------------------------------
+
+# Get IR representation of a module
+def module_ir(mod: any) -> str:
+    return ""
+
+# Get assembly representation of a module
+def module_asm(mod: any) -> str:
+    return ""
+
+# Get diagnostics (errors/warnings)
+def module_diagnostics(mod: any) -> list:
+    return []
+
+
+# --------------------------------------------
+# Optimization
+# --------------------------------------------
+
+# Optimize module with profile: "O0", "O1", "O2", "Os"
+def optimize_module(mod: any, profile: str) -> any:
+    return mod
+
+
+# --------------------------------------------
+# Compiler metadata
+# --------------------------------------------
+
+# Compiler version string
+def compiler_version() -> str:
+    return ""
+
+# Target triple (e.g. "x86_64-linux-gnu")
+def compiler_target() -> str:
+    return ""
 
