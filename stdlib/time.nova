@@ -1,0 +1,10 @@
+# Nova → Python time/datetime
+
+def now() -> str:
+    __native__("time.ctime")
+
+def sleep(ms: int):
+    __native__("time.sleep", ms / 1000.0)
+
+def timestamp() -> float:
+    __native__("time.time")
