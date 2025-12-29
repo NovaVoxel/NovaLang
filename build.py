@@ -1,7 +1,8 @@
 import os
 from compiler.lexer import tokenize
 from compiler.parser import parse
-from compiler.transpiler import transpile
+from compiler.ir_builder import build_ir
+from compiler.codegen_nomc import generate_nomc
 from compiler.packager import package
 
 SOURCE_DIR = "nova"
@@ -14,16 +15,14 @@ def build():
 
     tokens = list(tokenize(code))
     ast = parse(tokens)
-    py_code = transpile(ast)
+    ir_module = build_ir(ast)
+    obj_path = generate_nomc(ir_module, output=os.path.join(BIN_DIR, "main.o"))
 
-    os.makedirs(BIN_DIR, exist_ok=True)
-    py_path = os.path.join(BIN_DIR, "main.py")
-    with open(py_path, "w") as f:
-        f.write(py_code)
+    package("Nova Project", "main.o", BIN_DIR)
 
-    package("Nova Project", "main.py", BIN_DIR)
-
-    print("✅ Build abgeschlossen")
+    print("✅ Build finished")
+    print(f"→ {obj_path}")
+    print("→ Manifest.json created")
 
 if __name__ == "__main__":
     build()
