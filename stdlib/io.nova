@@ -1,12 +1,38 @@
-# Nova → Python IO
-def print(*args: any) -> None:
-    __native__("builtins.print", args)
+# ============================================
+# io.nova — Pure Nova file I/O interface
+# Values are injected by the runtime launcher
+# ============================================
 
-def input(prompt: str = "") -> str:
-    __native__("builtins.input", prompt)
+var _read_file_func: func(str) -> str = null
+var _write_file_func: func(str, str) -> void = null
+var _remove_file_func: func(str) -> void = null
+var _list_dir_func: func(str) -> list = null
 
-def read(path: str) -> str:
-    __native__("io.open", path, "r").read()
+# Called by runtime
+def __io_init__(
+    read_file_func: func(str) -> str,
+    write_file_func: func(str, str) -> void,
+    remove_file_func: func(str) -> void,
+    list_dir_func: func(str) -> list
+):
+    _read_file_func = read_file_func
+    _write_file_func = write_file_func
+    _remove_file_func = remove_file_func
+    _list_dir_func = list_dir_func
 
-def write(path: str, data: str) -> None:
-    __native__("io.open", path, "w").write(data)
+# Public API
+func read_file(path: str) -> str {
+    if _read_file_func == null { return "" }
+    return _read_file_func(path)
+}
+
+def write_file(path: str, data: str):
+    if _write_file_func != null { _write_file_func(path, data) }
+
+def remove_file(path: str):
+    if _remove_file_func != null { _remove_file_func(path) }
+
+func list_dir(path: str) -> list {
+    if _list_dir_func == null { return [] }
+    return _list_dir_func(path)
+}
