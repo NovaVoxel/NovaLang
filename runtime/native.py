@@ -1,166 +1,166 @@
 # ============================================
-# Nova launcher
-# Executes .novar archives directly (like a JAR)
+# Nova native bridge + stdlib backend
+# --------------------------------------------
+# This file implements:
+#
+#   - __native__(path, *args)
+#       → calls Python stdlib functions
+#
+#   - NOVA_STDLIB
+#       → mapping for Nova's "use std/..." modules
+#
+#   - nova_globals
+#       → sys_args, sys_input
+#
+# This is the backend for Nova's standard library.
 # ============================================
 
-import sys
-import tarfile
+import builtins
+import importlib
+import math
+import os
+import time
+import random
 import json
-import ctypes
-from llvmlite import binding
 
-binding.initialize()
-binding.initialize_native_target()
-binding.initialize_native_asmprinter()
-
-
-class NovaLauncherError(Exception):
-    """Generic launcher error for Nova runtime."""
-    pass
+# Injected by launcher.py
+try:
+    from launcher import nova_globals
+except Exception:
+    nova_globals = {
+        "sys_args": [],
+        "sys_input": input,
+    }
 
 
-# ----------------------------------------
-# Global runtime variables for Nova
-# ----------------------------------------
-nova_globals = {
-    # Command-line arguments AFTER the .novar path
-    "sys_args": sys.argv[2:],  # argv[0] = exe, argv[1] = .novar, rest = user args
-    # Direct access to input()
-    "sys_input": input,
+# --------------------------------------------
+# Nova Stdlib Backend
+# --------------------------------------------
+# These functions are exposed to Nova as:
+#
+#   use std/math
+#   math.sqrt(25)
+#
+#   use std/os
+#   os.listdir(".")
+#
+#   use std/time
+#   time.sleep(1)
+#
+#   use std/random
+#   random.randint(1, 10)
+#
+#   use std/json
+#   json.loads("{...}")
+#
+# --------------------------------------------
+
+NOVA_STDLIB = {
+    # math
+    "std/math.sqrt": math.sqrt,
+    "std/math.sin": math.sin,
+    "std/math.cos": math.cos,
+    "std/math.tan": math.tan,
+    "std/math.log": math.log,
+    "std/math.exp": math.exp,
+    "std/math.pi": lambda: math.pi,
+    "std/math.e": lambda: math.e,
+
+    # os
+    "std/os.getcwd": os.getcwd,
+    "std/os.listdir": os.listdir,
+    "std/os.exists": os.path.exists,
+    "std/os.isfile": os.path.isfile,
+    "std/os.isdir": os.path.isdir,
+    "std/os.join": os.path.join,
+
+    # time
+    "std/time.time": time.time,
+    "std/time.sleep": time.sleep,
+
+    # random
+    "std/random.random": random.random,
+    "std/random.randint": random.randint,
+    "std/random.choice": random.choice,
+
+    # json
+    "std/json.loads": json.loads,
+    "std/json.dumps": json.dumps,
 }
 
 
-def load_nomc_from_bytes(obj_bytes: bytes):
+# --------------------------------------------
+# Native call bridge
+# --------------------------------------------
+def __native__(path: str, *args):
     """
-    Load a .nomc module into an MCJIT execution engine.
+    Execute a native Python call or access a Python attribute.
 
-    NOTE:
-        Depending on how you emit .nomc, you might need to switch between:
-          - parse_bitcode()  -> for LLVM bitcode
-          - parse_assembly() -> for textual .ll
-          - create_object_file() -> for native object files
-
-        This implementation assumes that .nomc is LLVM bitcode.
+    Supports:
+        - stdlib calls (std/math.sqrt)
+        - python modules (math.sqrt)
+        - builtins (builtins.print)
+        - nova runtime globals (nova.sys_args)
     """
-    try:
-        backing_mod = binding.parse_bitcode(obj_bytes)
-    except Exception as e:
-        raise NovaLauncherError(f"Failed to parse .nomc bitcode: {e}")
 
-    target = binding.Target.from_default_triple()
-    target_machine = target.create_target_machine(opt=3)
-
-    try:
-        engine = binding.create_mcjit_compiler(backing_mod, target_machine)
-        engine.finalize_object()
-        engine.run_static_constructors()
-    except Exception as e:
-        raise NovaLauncherError(f"Failed to initialize execution engine: {e}")
-
-    return engine
-
-
-def run_main(engine, module_name: str) -> int:
-    """
-    Execute main() from a loaded module.
-
-    Convention:
-        Nova codegen must emit a C-style entry:
-            int main(void);
-    """
-    try:
-        func_ptr = engine.get_function_address("main")
-    except Exception:
-        raise NovaLauncherError(f"Module '{module_name}' has no main() function")
-
-    if func_ptr == 0:
-        raise NovaLauncherError(f"main() not found in module '{module_name}'")
-
-    cfunc = ctypes.CFUNCTYPE(ctypes.c_int)(func_ptr)
-    return cfunc()
-
-
-def launch(novar_path: str) -> int:
-    """
-    Launch a .novar archive:
-      - open tar
-      - read Manifest.json
-      - load and execute all listed .nomc binaries
-    """
     # ----------------------------------------
-    # Open .novar archive
+    # Nova runtime globals
     # ----------------------------------------
-    try:
-        tar = tarfile.open(novar_path, "r")
-    except Exception as e:
-        raise NovaLauncherError(f"Failed to open .novar '{novar_path}': {e}")
+    if path.startswith("nova."):
+        key = path.split(".", 1)[1]
+        if key not in nova_globals:
+            raise KeyError(f"Nova runtime variable '{key}' does not exist")
+        value = nova_globals[key]
+        if callable(value):
+            return value(*args)
+        if args:
+            raise TypeError(f"'{path}' is not callable but arguments were given")
+        return value
 
-    with tar:
-        # ----------------------------------------
-        # Read manifest
-        # ----------------------------------------
-        try:
-            manifest_file = tar.extractfile("bin/Manifest.json")
-            if manifest_file is None:
-                raise NovaLauncherError("Manifest 'bin/Manifest.json' not found in archive")
-            manifest = json.load(manifest_file)
-        except Exception as e:
-            raise NovaLauncherError(f"Failed to read Manifest.json: {e}")
+    # ----------------------------------------
+    # Nova Stdlib (std/...)
+    # ----------------------------------------
+    if path in NOVA_STDLIB:
+        func = NOVA_STDLIB[path]
+        return func(*args)
 
-        project = manifest.get("project", {})
-        name = project.get("name", "<unknown>")
-        version = project.get("version", "<unknown>")
+    # ----------------------------------------
+    # Builtins
+    # ----------------------------------------
+    if path.startswith("builtins."):
+        name = path.split(".", 1)[1]
+        if not hasattr(builtins, name):
+            raise AttributeError(f"Builtin '{name}' does not exist")
+        obj = getattr(builtins, name)
+        if callable(obj):
+            return obj(*args)
+        if args:
+            raise TypeError(f"'{path}' is not callable but arguments were given")
+        return obj
 
-        print(f"Launching {name} v{version}")
+    # ----------------------------------------
+    # Python module import fallback
+    # ----------------------------------------
+    if "." not in path:
+        raise ValueError(f"Invalid native path: {path!r}")
 
-        binaries = manifest.get("bin", [])
-        if not binaries:
-            raise NovaLauncherError("Manifest contains no compiled binaries in 'bin'")
-
-        # ----------------------------------------
-        # Load and execute each .nomc module
-        # ----------------------------------------
-        last_result = 0
-
-        for nomc_file in binaries:
-            try:
-                f = tar.extractfile(nomc_file)
-                if f is None:
-                    raise NovaLauncherError(f"Binary '{nomc_file}' not found in archive")
-                obj_bytes = f.read()
-            except Exception as e:
-                raise NovaLauncherError(f"Failed to read '{nomc_file}': {e}")
-
-            print(f"  -> Loading {nomc_file}...")
-            engine = load_nomc_from_bytes(obj_bytes)
-
-            # Execute main()
-            try:
-                result = run_main(engine, nomc_file)
-                print(f"     main() returned {result}")
-                last_result = result
-            except NovaLauncherError as e:
-                print(f"     Runtime error in {nomc_file}: {e}")
-                last_result = 1
-
-        return last_result
-
-
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: nova <file.novar> [args...]")
-        sys.exit(1)
-
-    novar_path = sys.argv[1]
+    module_name, attr_path = path.split(".", 1)
 
     try:
-        exit_code = launch(novar_path)
-    except NovaLauncherError as e:
-        print(f"[NovaLauncherError] {e}")
-        sys.exit(1)
+        module = importlib.import_module(module_name)
+    except ImportError as e:
+        raise ImportError(f"Module '{module_name}' could not be imported: {e}")
 
-    sys.exit(exit_code)
+    obj = module
+    for part in attr_path.split("."):
+        if not hasattr(obj, part):
+            raise AttributeError(f"'{obj}' has no attribute '{part}'")
+        obj = getattr(obj, part)
 
+    if callable(obj):
+        return obj(*args)
 
-if __name__ == "__main__":
-    main()
+    if args:
+        raise TypeError(f"'{path}' is not callable but arguments were given")
+
+    return obj
