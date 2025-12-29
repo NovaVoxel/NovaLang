@@ -12,7 +12,6 @@
 #   - IRModule: a module containing functions
 #
 # This IR is designed to be consumed by:
-#   - the Nova VM
 #   - the LLVM backend
 #   - future optimizers and analyzers
 # ============================================
