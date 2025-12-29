@@ -1,3 +1,5 @@
+from .ast import FunctionDef
+
 def generate(ast):
     output = []
     for node in ast:
