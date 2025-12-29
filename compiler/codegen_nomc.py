@@ -1,4 +1,4 @@
-# Nova LLVM backend code generator
+# Nova LLVM backend code generator with LTO
 # Emits optimized native machine code into .nomc files
 
 from llvmlite import ir, binding
@@ -28,10 +28,17 @@ def generate_nomc(ir_module, output="bin/main.nomc"):
 
     builder.ret(ir.IntType(32)(0))
 
-    # Compile to optimized machine code
+    # Prepare LLVM target
     target = binding.Target.from_default_triple()
     target_machine = target.create_target_machine(opt=3)  # -O3 optimization
-    obj = target_machine.emit_object(llvm_module)
+
+    # Enable LTO (Link Time Optimization)
+    with binding.create_mcjit_compiler(llvm_module, target_machine) as engine:
+        engine.finalize_object()
+        engine.run_static_constructors()
+
+        # Emit object with LTO enabled
+        obj = target_machine.emit_object(llvm_module)
 
     with open(output, "wb") as f:
         f.write(obj)
