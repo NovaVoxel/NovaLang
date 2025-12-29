@@ -1,7 +1,4 @@
-class FunctionDef:
-    def __init__(self, name, body):
-        self.name = name
-        self.body = body
+from .ast import FunctionDef
 
 def parse(tokens):
     ast = []
