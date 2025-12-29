@@ -1,176 +1,169 @@
-# ============================
-# AST Nodes
-# ============================
+# compiler/parser.py
 
-class FunctionDef:
-    def __init__(self, name, params, body):
-        self.name = name
-        self.params = params
-        self.body = body
+from compiler.lexer import TokenType
+from compiler.ast import (
+    BlockNode,
+    WhileNode,
+    ForEachNode,
+    VarAssignNode,
+    VarRefNode,
+    CallNode,
+    NumberNode,
+    StringNode,
+    BinaryOpNode,
+)
 
-    def __repr__(self):
-        return f"FunctionDef(name={self.name}, params={self.params}, body={self.body})"
-
-
-class UseStmt:
-    def __init__(self, module):
-        self.module = module
-
-    def __repr__(self):
-        return f"UseStmt(module={self.module})"
-
-
-class Block:
-    def __init__(self, statements):
-        self.statements = statements
-
-    def __repr__(self):
-        return f"Block({self.statements})"
-
-
-# ============================
-# Parser
-# ============================
 
 class Parser:
-    def __init__(self, tokens):
+    def __init__(self, tokens, reporter=None):
         self.tokens = tokens
-        self.i = 0
+        self.pos = 0
+        self.reporter = reporter
 
-    # Utility helpers
-    def peek(self, offset=0):
-        if self.i + offset < len(self.tokens):
-            return self.tokens[self.i + offset]
+    def current(self):
+        return self.tokens[self.pos]
+
+    def match(self, type_):
+        if self.current().type == type_:
+            tok = self.current()
+            self.pos += 1
+            return tok
         return None
 
-    def advance(self):
-        tok = self.peek()
-        self.i += 1
+    def expect(self, type_):
+        tok = self.current()
+        if tok.type != type_:
+            raise SyntaxError(f"Expected {type_}, got {tok.type} at {tok.line}:{tok.column}")
+        self.pos += 1
         return tok
 
-    def expect(self, type_):
-        tok = self.peek()
-        if not tok or tok.type != type_:
-            raise SyntaxError(f"Expected {type_}, got {tok}")
-        return self.advance()
+    def check(self, type_):
+        return self.current().type == type_
 
-    # ============================
-    # Top-level parse
-    # ============================
+    # Entry ---------------------------------------------------
 
     def parse(self):
-        ast = []
+        stmts = []
+        while self.current().type != TokenType.EOF:
+            stmts.append(self.parse_statement())
+        return BlockNode(stmts)
 
-        while self.peek() and self.peek().type != "EOF":
-            tok = self.peek()
+    # Statements ----------------------------------------------
 
-            if tok.type == "USE":
-                ast.append(self.parse_use())
+    def parse_statement(self):
+        tok = self.current()
 
-            elif tok.type == "DEF":
-                ast.append(self.parse_function())
+        if tok.type == TokenType.FOR:
+            return self.parse_for_each()
 
+        if tok.type == TokenType.WHILE:
+            return self.parse_while()
+        if tok.type == TokenType.IDENT:
+            # lookahead for assignment
+            if self.tokens[self.pos + 1].type == TokenType.EQUAL:
+                return self.parse_assignment()
             else:
-                self.advance()  # skip unknown
+                expr = self.parse_expression()
+                self.match(TokenType.SEMICOLON)
+                return expr
 
-        return ast
+        # Block
+        if tok.type == TokenType.LBRACE:
+            return self.parse_block()
 
-    # ============================
-    # use <module>
-    # ============================
-
-    def parse_use(self):
-        self.expect("USE")
-        ident = self.expect("IDENT")
-        return UseStmt(ident.value)
-
-    # ============================
-    # def <name>(params): NEWLINE INDENT block DEDENT
-    # ============================
-
-    def parse_function(self):
-        self.expect("DEF")
-        name = self.expect("IDENT").value
-
-        self.expect("LPAREN")
-        params = self.parse_params()
-        self.expect("RPAREN")
-
-        self.expect("COLON")
-        self.expect("NEWLINE")
-
-        body = self.parse_block()
-
-        return FunctionDef(name, params, body)
-
-    # ============================
-    # Parameter list
-    # ============================
-
-    def parse_params(self):
-        params = []
-
-        if self.peek().type == "RPAREN":
-            return params
-
-        while True:
-            ident = self.expect("IDENT")
-            params.append(ident.value)
-
-            if self.peek().type == "COMMA":
-                self.advance()
-                continue
-            break
-
-        return params
-
-    # ============================
-    # Block: INDENT ... DEDENT
-    # ============================
+        # Fallback: Expression-Statement
+        expr = self.parse_expression()
+        self.match(TokenType.SEMICOLON)
+        return expr
 
     def parse_block(self):
-        statements = []
+        lbrace = self.expect(TokenType.LBRACE)
+        stmts = []
+        while not self.check(TokenType.RBRACE):
+            stmts.append(self.parse_statement())
+        self.expect(TokenType.RBRACE)
+        return BlockNode(stmts, span=(lbrace.line, lbrace.column))
 
-        self.expect("INDENT")
+    def parse_while(self):
+        while_tok = self.expect(TokenType.WHILE)
+        cond = self.parse_expression()
+        body = self.parse_block()
+        return WhileNode(cond, body, span=(while_tok.line, while_tok.column))
 
-        while True:
-            tok = self.peek()
+    def parse_for_each(self):
+        for_tok = self.expect(TokenType.FOR)
 
-            if tok.type == "DEDENT":
-                self.advance()
-                break
+        vars_ = [self.expect(TokenType.IDENT).value]
+        if self.match(TokenType.COMMA):
+            vars_.append(self.expect(TokenType.IDENT).value)
 
-            if tok.type == "USE":
-                statements.append(self.parse_use())
+        iterable = self.parse_expression()
+        body = self.parse_block()
 
-            elif tok.type == "DEF":
-                statements.append(self.parse_function())
+        return ForEachNode(vars_, iterable, body, span=(for_tok.line, for_tok.column))
 
-            else:
-                self.advance()  # skip unknown
+    def parse_assignment(self):
+        name_tok = self.expect(TokenType.IDENT)
+        self.expect(TokenType.EQUAL)
+        expr = self.parse_expression()
+        self.match(TokenType.SEMICOLON)
+        return VarAssignNode(name_tok.value, expr, span=(name_tok.line, name_tok.column))
 
-        return Block(statements)
+    # Expressions ---------------------------------------------
 
+    def parse_expression(self):
+        return self.parse_add()
 
-# ============================
-# Example usage
-# ============================
+    def parse_add(self):
+        node = self.parse_term()
+        while self.check(TokenType.PLUS) or self.check(TokenType.MINUS):
+            op = self.current().type
+            self.pos += 1
+            right = self.parse_term()
+            node = BinaryOpNode(node, op, right)
+        return node
 
-if __name__ == "__main__":
-    from lexer import Lexer  
+    def parse_term(self):
+        node = self.parse_factor()
+        while self.check(TokenType.STAR) or self.check(TokenType.SLASH):
+            op = self.current().type
+            self.pos += 1
+            right = self.parse_factor()
+            node = BinaryOpNode(node, op, right)
+        return node
 
-    code = """
-use math
+    def parse_factor(self):
+        tok = self.current()
 
-def test(x, y):
-    use io
-    def inner(z):
-        use sys
-"""
+        if tok.type == TokenType.NUMBER:
+            self.pos += 1
+            return NumberNode(tok.value)
 
-    tokens = Lexer(code).tokenize()
-    parser = Parser(tokens)
-    ast = parser.parse()
+        if tok.type == TokenType.STRING:
+            self.pos += 1
+            return StringNode(tok.value)
 
-    for node in ast:
-        print(node)
+        if tok.type == TokenType.IDENT:
+            if self.tokens[self.pos + 1].type == TokenType.LPAREN:
+                return self.parse_call()
+            self.pos += 1
+            return VarRefNode(tok.value)
+
+        if tok.type == TokenType.LPAREN:
+            self.pos += 1
+            expr = self.parse_expression()
+            self.expect(TokenType.RPAREN)
+            return expr
+
+        raise SyntaxError(f"Unexpected token {tok.type} at {tok.line}:{tok.column}")
+
+    def parse_call(self):
+        ident = self.expect(TokenType.IDENT)
+        self.expect(TokenType.LPAREN)
+        args = []
+        if not self.check(TokenType.RPAREN):
+            args.append(self.parse_expression())
+            while self.match(TokenType.COMMA):
+                args.append(self.parse_expression())
+        self.expect(TokenType.RPAREN)
+        return CallNode(VarRefNode(ident.value), args)
