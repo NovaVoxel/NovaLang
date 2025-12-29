@@ -46,7 +46,7 @@ from .ast import (
     CallExpr,
     IfStmt,
     WhileStmt,
-    ForEachStmt,   # your Python-style for i range(...) { }
+    ForEachStmt,
     ReturnStmt
 )
 
