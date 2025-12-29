@@ -1,10 +1,21 @@
-# Nova → Python time/datetime
+# ============================================
+# time.nova — Pure Nova time interface
+# Values are injected by the runtime launcher
+# ============================================
 
-def now() -> str:
-    __native__("time.ctime")
+var _now_func: func() -> float = null
+var _sleep_func: func(float) -> void = null
 
-def sleep(ms: int):
-    __native__("time.sleep", ms / 1000.0)
+# Called by runtime
+def __time_init__(now_func: func() -> float, sleep_func: func(float) -> void):
+    _now_func = now_func
+    _sleep_func = sleep_func
 
-def timestamp() -> float:
-    __native__("time.time")
+# Public API
+func now() -> float {
+    if _now_func == null { return 0.0 }
+    return _now_func()
+}
+
+def sleep(seconds: float):
+    if _sleep_func != null { _sleep_func(seconds) }
