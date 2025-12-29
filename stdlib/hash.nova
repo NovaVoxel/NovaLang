@@ -1,0 +1,7 @@
+# Nova → Python hashlib
+
+def md5(data: str) -> str:
+    __native__("hashlib.md5", data.encode()).hexdigest()
+
+def sha256(data: str) -> str:
+    __native__("hashlib.sha256", data.encode()).hexdigest()
