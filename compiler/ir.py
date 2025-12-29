@@ -1,111 +1,131 @@
-# ============================================
-# Nova Intermediate Representation (IR)
-# A structured, extensible IR between AST and LLVM
-# ============================================
+# compiler/ir.py
+#
+# Nova IR Core:
+#  - IRModule: enthält Funktionen
+#  - IRFunction: enthält Blöcke, Temps, Parameter
+#  - IRBlock: enthält IRInstruction-Objekte
+#  - IRInstruction: eine einzelne Operation
+#  - IRConst: Wrapper für Konstanten
+#  - IRTemp: temporärer Wert (Resultat einer Instruktion)
+#
+# OpCodes sind einfache Strings, z.B.:
+#   "load_const", "load_var", "store_var",
+#   "add", "cmp_lt", "jump", "jump_if_false",
+#   "make_iter", "iter_has_next", "iter_next", ...
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Union
+class IRConst:
+    """Konstante Literalwerte im IR."""
+    __slots__ = ("value",)
 
-
-# ============================================
-# Base IR Value
-# ============================================
-
-class IRValue:
-    """Base class for anything that can be used as an operand."""
-    pass
-
-
-@dataclass
-class IRTemp(IRValue):
-    """Temporary SSA value (t0, t1, t2...)"""
-    name: str
-
-    def __repr__(self):
-        return self.name
-
-
-@dataclass
-class IRConst(IRValue):
-    """Constant literal value."""
-    value: Union[int, float, str]
+    def __init__(self, value):
+        self.value = value
 
     def __repr__(self):
-        return repr(self.value)
+        return f"IRConst({self.value!r})"
 
 
-# ============================================
-# IR Instruction
-# ============================================
+class IRTemp:
+    """Temporärer Wert, der Ergebnis einer Instruktion sein kann."""
+    __slots__ = ("name",)
 
-@dataclass
+    def __init__(self, name: str):
+        self.name = name
+
+    def __repr__(self):
+        return f"IRTemp({self.name})"
+
+
 class IRInstruction:
-    opcode: str
-    operands: List[IRValue] = field(default_factory=list)
-    result: Optional[IRTemp] = None
+    """
+    Eine IR-Instruction mit:
+      - opcode: str (z.B. "add", "jump_if_false", "make_iter")
+      - operands: Liste aus IRConst / IRTemp / Strings (z.B. Variablennamen, Labelnamen)
+      - result: IRTemp oder None
+
+    Beispiele:
+      IRInstruction("load_const", [IRConst(42)], result=%t0)
+      IRInstruction("jump_if_false", [%t0, "Lend"])
+    """
+    __slots__ = ("opcode", "operands", "result")
+
+    def __init__(self, opcode: str, operands=None, result=None):
+        self.opcode = opcode
+        self.operands = operands or []
+        self.result = result  # IRTemp oder None
 
     def __repr__(self):
-        if self.result:
-            return f"{self.result} = {self.opcode} " + " ".join(map(str, self.operands))
-        return f"{self.opcode} " + " ".join(map(str, self.operands))
+        base = f"{self.opcode}(" + ", ".join(repr(o) for o in self.operands) + ")"
+        if self.result is not None:
+            return f"{self.result} = {base}"
+        return base
 
 
-# ============================================
-# IR Basic Block
-# ============================================
-
-@dataclass
 class IRBlock:
-    name: str
-    instructions: List[IRInstruction] = field(default_factory=list)
+    """Ein Basic Block mit einer Folge von IRInstructions."""
+    __slots__ = ("name", "instructions")
+
+    def __init__(self, name: str):
+        self.name = name
+        self.instructions = []
 
     def add(self, instr: IRInstruction):
         self.instructions.append(instr)
 
     def __repr__(self):
-        body = "\n    ".join(map(str, self.instructions))
-        return f"{self.name}:\n    {body}"
+        lines = [f"{self.name}:"]
+        for instr in self.instructions:
+            lines.append(f"  {instr}")
+        return "\n".join(lines)
 
-
-# ============================================
-# IR Function
-# ============================================
 
 class IRFunction:
-    def __init__(self, name, params=None):
+    """
+    Repräsentiert eine Funktion:
+      - name: Funktionsname
+      - params: Parameterliste (Strings)
+      - blocks: Liste von IRBlocks
+      - temps: Zähler für temporäre Werte
+    """
+    __slots__ = ("name", "params", "blocks", "_temp_counter")
+
+    def __init__(self, name: str, params=None):
         self.name = name
         self.params = params or []
-        self.blocks: List[IRBlock] = []
-        self.temp_counter = 0
+        self.blocks = []
+        self._temp_counter = 0
 
-    def new_temp(self):
-        t = IRTemp(f"t{self.temp_counter}")
-        self.temp_counter += 1
-        return t
-
-    def new_block(self, name):
+    def new_block(self, name: str) -> IRBlock:
         block = IRBlock(name)
         self.blocks.append(block)
         return block
 
+    def new_temp(self) -> IRTemp:
+        name = f"%t{self._temp_counter}"
+        self._temp_counter += 1
+        return IRTemp(name)
+
     def __repr__(self):
-        header = f"Function {self.name}({', '.join(self.params)})"
-        blocks = "\n".join(map(str, self.blocks))
-        return f"{header}\n{blocks}"
+        lines = [f"func {self.name}({', '.join(self.params)})"]
+        for block in self.blocks:
+            lines.append(repr(block))
+        return "\n".join(lines)
 
-
-# ============================================
-# IR Module
-# ============================================
 
 class IRModule:
-    def __init__(self, name="nova_module"):
+    """
+    Sammlung von IRFunctions.
+    """
+    __slots__ = ("name", "functions")
+
+    def __init__(self, name: str):
         self.name = name
-        self.functions: List[IRFunction] = []
+        self.functions = []
 
     def add_function(self, func: IRFunction):
         self.functions.append(func)
 
     def __repr__(self):
-        funcs = "\n\n".join(map(str, self.functions))
-        return f"Module {self.name}\n\n{funcs}"
+        lines = [f"module {self.name}"]
+        for f in self.functions:
+            lines.append(repr(f))
+        return "\n\n".join(lines)
