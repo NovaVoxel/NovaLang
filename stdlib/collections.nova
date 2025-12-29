@@ -1,11 +1,9 @@
-def list() -> list:
-    __native__("collections.list")
+# Nova → Python collections
+def Counter(seq: list) -> dict:
+    __native__("collections.Counter", seq)
 
-def dict() -> dict:
-    __native__("collections.dict")
+def deque(seq: list = []) -> any:
+    __native__("collections.deque", seq)
 
-def set() -> set:
-    __native__("collections.set")
-
-def tuple() -> tuple:
-    __native__("collections.tuple")
+def OrderedDict(items: list = []) -> dict:
+    __native__("collections.OrderedDict", items)
