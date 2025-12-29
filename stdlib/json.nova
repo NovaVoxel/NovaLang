@@ -1,3 +1,4 @@
+# Nova → Python json
 def dumps(obj: any) -> str:
     __native__("json.dumps", obj)
 
