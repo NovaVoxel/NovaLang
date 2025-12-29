@@ -1,26 +1,55 @@
+# ============================================
 # Nova Issue Reporter
-# Collects and formats compiler errors/warnings for clear output
+# Collects, formats and manages compiler issues
+# ============================================
 
+import sys
+from dataclasses import dataclass
+from typing import Optional, List
+
+
+# --------------------------------------------
+# Single issue
+# --------------------------------------------
+
+@dataclass
 class Issue:
-    def __init__(self, kind, message, line=None, col=None):
-        self.kind = kind      # "error" or "warning"
-        self.message = message
-        self.line = line
-        self.col = col
+    kind: str               # "error" or "warning"
+    message: str
+    line: Optional[int] = None
+    col: Optional[int] = None
+    code: Optional[str] = None   # e.g. NOVA001
 
     def __repr__(self):
-        pos = f"(line {self.line}, col {self.col})" if self.line is not None else ""
-        return f"[{self.kind.upper()}] {self.message} {pos}"
+        loc = ""
+        if self.line is not None:
+            loc = f"(line {self.line}, col {self.col})"
+
+        code = f"[{self.code}] " if self.code else ""
+        return f"[{self.kind.upper()}] {code}{self.message} {loc}".rstrip()
+
+
+# --------------------------------------------
+# Issue Reporter
+# --------------------------------------------
 
 class IssueReporter:
     def __init__(self):
-        self.issues = []
+        self.issues: List[Issue] = []
 
-    def error(self, message, line=None, col=None):
-        self.issues.append(Issue("error", message, line, col))
+    # --------------------------
+    # Add issues
+    # --------------------------
 
-    def warning(self, message, line=None, col=None):
-        self.issues.append(Issue("warning", message, line, col))
+    def error(self, message, line=None, col=None, code=None):
+        self.issues.append(Issue("error", message, line, col, code))
+
+    def warning(self, message, line=None, col=None, code=None):
+        self.issues.append(Issue("warning", message, line, col, code))
+
+    # --------------------------
+    # Query
+    # --------------------------
 
     def has_errors(self):
         return any(i.kind == "error" for i in self.issues)
@@ -28,9 +57,38 @@ class IssueReporter:
     def has_warnings(self):
         return any(i.kind == "warning" for i in self.issues)
 
-    def report(self):
+    def count_errors(self):
+        return sum(1 for i in self.issues if i.kind == "error")
+
+    def count_warnings(self):
+        return sum(1 for i in self.issues if i.kind == "warning")
+
+    # --------------------------
+    # Output formatting
+    # --------------------------
+
+    def report(self, stream=sys.stdout):
         if not self.issues:
-            return  # ✅ nothing printed if all is fine
-        print("=== Issues ===")
+            return
+
+        # Sort: errors first, then warnings, then by line
+        self.issues.sort(
+            key=lambda i: (0 if i.kind == "error" else 1, i.line or -1)
+        )
+
+        print("=== Nova Compiler Issues ===", file=stream)
+
         for issue in self.issues:
-            print(issue)
+            print(issue, file=stream)
+
+        print(
+            f"\n{self.count_errors()} error(s), {self.count_warnings()} warning(s)",
+            file=stream
+        )
+
+    # --------------------------
+    # Clear issues (for multi-pass compilers)
+    # --------------------------
+
+    def reset(self):
+        self.issues.clear()
