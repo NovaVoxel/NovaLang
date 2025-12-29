@@ -1,0 +1,8 @@
+{
+  "project": {
+    "name": "Nova Language",
+    "version": "0.1.0",
+    "author": "Vincent Noll"
+  },
+  "entry": "bin/main.nomc"
+}
