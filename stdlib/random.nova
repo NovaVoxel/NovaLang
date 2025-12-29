@@ -1,3 +1,4 @@
+# Nova → Python random
 def randint(a: int, b: int) -> int:
     __native__("random.randint", a, b)
 
