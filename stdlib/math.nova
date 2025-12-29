@@ -1,4 +1,5 @@
 # Nova → Python math
+
 def sqrt(x: float) -> float:
     __native__("math.sqrt", x)
 
@@ -16,3 +17,15 @@ def log(x: float) -> float:
 
 def exp(x: float) -> float:
     __native__("math.exp", x)
+
+def floor(x: float) -> int:
+    __native__("math.floor", x)
+
+def ceil(x: float) -> int:
+    __native__("math.ceil", x)
+
+def atan2(y: float, x: float) -> float:
+    __native__("math.atan2", y, x)
+
+def hypot(x: float, y: float) -> float:
+    __native__("math.hypot", x, y)
