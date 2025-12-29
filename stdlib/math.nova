@@ -1,31 +1,167 @@
-# Nova → Python math
+# ============================================
+# math.nova — Nova Standard Math Library
+# Pure Nova, no imports, no native bridge
+# ============================================
 
+
+# --------------------------------------------
+# atan series (internal helper)
+# --------------------------------------------
+def atan_series(x: float) -> float:
+    term = x
+    sum = x
+    x2 = x * x
+    i = 1
+
+    while i < 15:
+        term = term * (-1.0) * x2
+        sum = sum + term / (2.0 * i + 1.0)
+        i = i + 1
+
+    return sum
+
+
+# --------------------------------------------
+# PI using Machin's formula
+# PI = 16 * atan(1/5) - 4 * atan(1/239)
+# --------------------------------------------
+def compute_pi() -> float:
+    a = atan_series(1.0 / 5.0)
+    b = atan_series(1.0 / 239.0)
+    return 16.0 * a - 4.0 * b
+
+PI = compute_pi()
+TWO_PI = PI * 2.0
+
+
+# --------------------------------------------
+# Simple helpers as func {} one-liners
+# --------------------------------------------
+func abs(x: float) -> float { if x < 0.0 { return -x } return x }
+func floor(x: float) -> int { let i = int(x); if i <= x { return i } return i - 1 }
+func ceil(x: float) -> int { let i = int(x); if i >= x { return i } return i + 1 }
+
+
+# --------------------------------------------
+# sqrt(x) — Newton iteration
+# --------------------------------------------
 def sqrt(x: float) -> float:
-    __native__("math.sqrt", x)
+    if x == 0.0:
+        return 0.0
 
-def sin(x: float) -> float:
-    __native__("math.sin", x)
+    guess = x
+    i = 0
+    while i < 20:
+        guess = 0.5 * (guess + x / guess)
+        i = i + 1
 
-def cos(x: float) -> float:
-    __native__("math.cos", x)
+    return guess
 
-def tan(x: float) -> float:
-    __native__("math.tan", x)
 
-def log(x: float) -> float:
-    __native__("math.log", x)
-
+# --------------------------------------------
+# exp(x) — Taylor series
+# --------------------------------------------
 def exp(x: float) -> float:
-    __native__("math.exp", x)
+    term = 1.0
+    sum = 1.0
+    n = 1
 
-def floor(x: float) -> int:
-    __native__("math.floor", x)
+    while n < 20:
+        term = term * (x / n)
+        sum = sum + term
+        n = n + 1
 
-def ceil(x: float) -> int:
-    __native__("math.ceil", x)
+    return sum
 
+
+# --------------------------------------------
+# log(x) — Newton iteration
+# --------------------------------------------
+def log(x: float) -> float:
+    y = 1.0
+    i = 0
+
+    while i < 30:
+        ey = exp(y)
+        y = y - (ey - x) / ey
+        i = i + 1
+
+    return y
+
+
+# --------------------------------------------
+# sin(x) — Taylor series + range reduction
+# --------------------------------------------
+def sin(x: float) -> float:
+    x = x % TWO_PI
+    if x > PI:
+        x = x - TWO_PI
+
+    x2 = x * x
+
+    return (
+        x
+        - x * x2 / 6.0
+        + x * x2 * x2 / 120.0
+        - x * x2 * x2 * x2 / 5040.0
+    )
+
+
+# --------------------------------------------
+# cos(x) — Taylor series + range reduction
+# --------------------------------------------
+def cos(x: float) -> float:
+    x = x % TWO_PI
+    if x > PI:
+        x = x - TWO_PI
+
+    x2 = x * x
+
+    return (
+        1.0
+        - x2 / 2.0
+        + x2 * x2 / 24.0
+        - x2 * x2 * x2 / 720.0
+    )
+
+
+# --------------------------------------------
+# tan(x)
+# --------------------------------------------
+func tan(x: float) -> float { return sin(x) / cos(x) }
+
+
+# --------------------------------------------
+# atan(x) — range reduction + series
+# --------------------------------------------
+def atan(x: float) -> float:
+    if x >= -1.0 and x <= 1.0:
+        return atan_series(x)
+
+    if x > 0.0:
+        return PI / 2.0 - atan_series(1.0 / x)
+
+    return -PI / 2.0 + atan_series(1.0 / (-x))
+
+
+# --------------------------------------------
+# atan2(y, x)
+# --------------------------------------------
 def atan2(y: float, x: float) -> float:
-    __native__("math.atan2", y, x)
+    if x > 0.0:
+        return atan(y / x)
+    if x < 0.0 and y >= 0.0:
+        return atan(y / x) + PI
+    if x < 0.0 and y < 0.0:
+        return atan(y / x) - PI
+    if x == 0.0 and y > 0.0:
+        return PI / 2.0
+    if x == 0.0 and y < 0.0:
+        return -PI / 2.0
+    return 0.0
 
-def hypot(x: float, y: float) -> float:
-    __native__("math.hypot", x, y)
+
+# --------------------------------------------
+# hypot(x, y)
+# --------------------------------------------
+func hypot(x: float, y: float) -> float { return sqrt(x * x + y * y) }
