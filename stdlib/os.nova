@@ -1,0 +1,6 @@
+use std/os
+
+func main() {
+    print("Running on: " + platform())
+    print("Current dir: " + cwd())
+}
