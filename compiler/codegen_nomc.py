@@ -1,5 +1,7 @@
-# Nova LLVM backend code generator with LTO
+# ============================================
+# Nova LLVM backend with LTO support
 # Emits optimized native machine code into .nomc files
+# ============================================
 
 from llvmlite import ir, binding
 
@@ -7,40 +9,118 @@ binding.initialize()
 binding.initialize_native_target()
 binding.initialize_native_asmprinter()
 
-def generate_nomc(ir_module, output="bin/main.nomc"):
-    llvm_module = ir.Module(name=ir_module.name)
 
-    # Define main function
-    func_type = ir.FunctionType(ir.IntType(32), [])
-    main_func = ir.Function(llvm_module, func_type, name="main")
-    block = main_func.append_basic_block(name="entry")
-    builder = ir.IRBuilder(block)
+class LLVMBackend:
+    def __init__(self):
+        self.printf = None
+        self.string_cache = {}
 
-    # Lower IR instructions
-    for func in ir_module.functions:
-        for instr in func.instructions:
-            if instr.opcode == "PRINT_CONST":
-                text = instr.operands[0]
-                hello_str = builder.global_string(text + "\n", name="str")
-                printf_ty = ir.FunctionType(ir.IntType(32), [ir.PointerType(ir.IntType(8))], var_arg=True)
-                printf = ir.Function(llvm_module, printf_ty, name="printf")
-                builder.call(printf, [hello_str])
+    # ----------------------------------------
+    # Create or reuse printf declaration
+    # ----------------------------------------
+    def get_printf(self, module):
+        if self.printf:
+            return self.printf
 
-    builder.ret(ir.IntType(32)(0))
+        printf_ty = ir.FunctionType(
+            ir.IntType(32),
+            [ir.PointerType(ir.IntType(8))],
+            var_arg=True
+        )
+        self.printf = ir.Function(module, printf_ty, name="printf")
+        return self.printf
 
-    # Prepare LLVM target
-    target = binding.Target.from_default_triple()
-    target_machine = target.create_target_machine(opt=3)  # -O3 optimization
+    # ----------------------------------------
+    # Create or reuse global string
+    # ----------------------------------------
+    def get_global_string(self, builder, module, text):
+        if text in self.string_cache:
+            return self.string_cache[text]
 
-    # Enable LTO (Link Time Optimization)
-    with binding.create_mcjit_compiler(llvm_module, target_machine) as engine:
-        engine.finalize_object()
-        engine.run_static_constructors()
+        string = builder.global_string(text, name=f"str_{len(self.string_cache)}")
+        self.string_cache[text] = string
+        return string
 
-        # Emit object with LTO enabled
+    # ----------------------------------------
+    # Lower a single Nova IR instruction
+    # ----------------------------------------
+    def lower_instruction(self, builder, module, instr):
+        op = instr.opcode
+
+        # PRINT_CONST "hello"
+        if op == "PRINT_CONST":
+            text = instr.operands[0]
+            printf = self.get_printf(module)
+            gstr = self.get_global_string(builder, module, text + "\n")
+            builder.call(printf, [gstr])
+            return
+
+        # RETURN or RETURN value
+        if op == "RETURN":
+            if instr.operands:
+                val = instr.operands[0]
+                if isinstance(val, int):
+                    builder.ret(ir.IntType(32)(val))
+                else:
+                    raise ValueError("Unsupported return value type")
+            else:
+                builder.ret(ir.IntType(32)(0))
+            return
+
+        # TODO: ADD, SUB, CALL, JUMP, etc.
+        print(f"[WARN] Unimplemented IR opcode: {op}")
+
+    # ----------------------------------------
+    # Lower a Nova IR function into LLVM IR
+    # ----------------------------------------
+    def lower_function(self, module, func):
+        func_type = ir.FunctionType(ir.IntType(32), [])
+        llvm_func = ir.Function(module, func_type, name=func.name)
+
+        entry = llvm_func.append_basic_block("entry")
+        builder = ir.IRBuilder(entry)
+
+        # Lower all blocks + instructions
+        for block in func.blocks:
+            for instr in block.instructions:
+                self.lower_instruction(builder, module, instr)
+
+        # Ensure function ends with return
+        if not builder.block.is_terminated:
+            builder.ret(ir.IntType(32)(0))
+
+    # ----------------------------------------
+    # Build LLVM module from Nova IR module
+    # ----------------------------------------
+    def build_llvm_module(self, ir_module):
+        llvm_module = ir.Module(name=ir_module.name)
+
+        for func in ir_module.functions:
+            self.lower_function(llvm_module, func)
+
+        return llvm_module
+
+    # ----------------------------------------
+    # Emit optimized native object file (.nomc)
+    # ----------------------------------------
+    def emit_nomc(self, llvm_module, output):
+        target = binding.Target.from_default_triple()
+        target_machine = target.create_target_machine(opt=3)
+
+        # LTO-ready object emission
         obj = target_machine.emit_object(llvm_module)
 
-    with open(output, "wb") as f:
-        f.write(obj)
+        with open(output, "wb") as f:
+            f.write(obj)
 
-    return output
+        return output
+
+
+# ============================================
+# Public API
+# ============================================
+
+def generate_nomc(ir_module, output="bin/main.nomc"):
+    backend = LLVMBackend()
+    llvm_module = backend.build_llvm_module(ir_module)
+    return backend.emit_nomc(llvm_module, output)
