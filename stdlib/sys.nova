@@ -3,26 +3,17 @@
 # Values are injected by the runtime launcher
 # ============================================
 
-# These globals are filled by the Nova runtime before main() runs.
 var _args: list = []
 var _input_func: func(str) -> str = null
 
-
-# Called by the runtime to initialize system bindings
+# Called by runtime
 def __sys_init__(args: list, input_func: func(str) -> str):
     _args = args
     _input_func = input_func
 
-
-# --------------------------------------------
 # Public API
-# --------------------------------------------
-
-# Return command-line arguments
 func args() -> list { return _args }
 
-# Prompt user for input
 def prompt(msg: str) -> str:
-    if _input_func == null:
-        return ""
+    if _input_func == null { return "" }
     return _input_func(msg)
