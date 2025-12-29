@@ -1,0 +1,13 @@
+# Regex utilities via Python re
+
+def match(pattern: str, text: str):
+    return __native__("re.match", pattern, text)
+
+def search(pattern: str, text: str):
+    return __native__("re.search", pattern, text)
+
+def findall(pattern: str, text: str) -> list:
+    return __native__("re.findall", pattern, text)
+
+def sub(pattern: str, repl: str, text: str) -> str:
+    return __native__("re.sub", pattern, repl, text)
