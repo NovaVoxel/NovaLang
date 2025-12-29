@@ -1,0 +1,10 @@
+# Nova → Python file system (os, pathlib)
+
+def read_file(path: str) -> str:
+    __native__("builtins.open", path, "r").read()
+
+def write_file(path: str, data: str):
+    __native__("builtins.open", path, "w").write(data)
+
+def list_dir(path: str) -> list:
+    __native__("os.listdir", path)
