@@ -1,18 +1,3 @@
-# compiler/ir.py
-#
-# Nova IR Core:
-#  - IRModule: enthält Funktionen
-#  - IRFunction: enthält Blöcke, Temps, Parameter
-#  - IRBlock: enthält IRInstruction-Objekte
-#  - IRInstruction: eine einzelne Operation
-#  - IRConst: Wrapper für Konstanten
-#  - IRTemp: temporärer Wert (Resultat einer Instruktion)
-#
-# OpCodes sind einfache Strings, z.B.:
-#   "load_const", "load_var", "store_var",
-#   "add", "cmp_lt", "jump", "jump_if_false",
-#   "make_iter", "iter_has_next", "iter_next", ...
-
 class IRConst:
     """Konstante Literalwerte im IR."""
     __slots__ = ("value",)
