@@ -1,0 +1,10 @@
+# Error utilities
+
+def raise_error(msg: str):
+    return __native__("builtins.Exception", msg)
+
+def format_error(err) -> str:
+    return __native__("errors.format_error", err)
+
+def log_error(msg: str):
+    return __native__("errors.log_error", msg)
