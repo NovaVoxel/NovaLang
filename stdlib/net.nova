@@ -1,0 +1,19 @@
+# Nova → Python net.py (Networking)
+
+def listen(host: str, port: int):
+    __native__("net.listen", host, port)
+
+def connect(host: str, port: int):
+    __native__("net.connect", host, port)
+
+def accept(server):
+    __native__("net.accept", server)
+
+def read(socket, bufsize: int = 4096) -> str:
+    __native__("net.read", socket, bufsize)
+
+def write(socket, data: str):
+    __native__("net.write", socket, data)
+
+def close(socket):
+    __native__("net.close", socket)
