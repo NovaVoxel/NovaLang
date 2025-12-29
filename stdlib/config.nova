@@ -1,0 +1,13 @@
+# Config management
+
+def load(path: str) -> dict:
+    return __native__("config.load", path)
+
+def save(path: str, cfg: dict):
+    return __native__("config.save", path, cfg)
+
+def get(key: str, default=None):
+    return __native__("config.get", key, default)
+
+def set(key: str, value):
+    return __native__("config.set", key, value)
