@@ -1,0 +1,7 @@
+# Nova → Python sys/input
+
+def args() -> list:
+    __native__("sys.argv")
+
+def prompt(msg: str) -> str:
+    __native__("builtins.input", msg)
