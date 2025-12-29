@@ -1,0 +1,7 @@
+# Nova → Python requests
+
+def get(url: str) -> str:
+    __native__("requests.get", url).text
+
+def post(url: str, data: dict) -> str:
+    __native__("requests.post", url, data).text
