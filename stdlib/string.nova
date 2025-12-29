@@ -1,0 +1,10 @@
+# Nova → Python str helpers
+
+def split(s: str, sep: str) -> list:
+    __native__("str.split", s, sep)
+
+def join(lst: list, sep: str) -> str:
+    __native__("sep.join", lst)
+
+def replace(s: str, old: str, new: str) -> str:
+    __native__("str.replace", s, old, new)
