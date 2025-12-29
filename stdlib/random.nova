@@ -1,0 +1,11 @@
+def randint(a: int, b: int) -> int:
+    __native__("random.randint", a, b)
+
+def choice(seq: list) -> any:
+    __native__("random.choice", seq)
+
+def shuffle(seq: list) -> list:
+    __native__("random.shuffle", seq)
+
+def random() -> float:
+    __native__("random.random")
