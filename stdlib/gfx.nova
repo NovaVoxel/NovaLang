@@ -1,0 +1,16 @@
+# Nova → Python gfx.py (Graphics)
+
+def create_window(title: str, width: int, height: int):
+    __native__("gfx.create_window", title, width, height)
+
+def clear(window, color: str = "black"):
+    __native__("gfx.clear", window, color)
+
+def draw_rect(window, x: int, y: int, w: int, h: int, color: str = "white"):
+    __native__("gfx.draw_rect", window, x, y, w, h, color)
+
+def draw_text(window, text: str, x: int, y: int, color: str = "white"):
+    __native__("gfx.draw_text", window, text, x, y, color)
+
+def run(window, loop_func):
+    __native__("gfx.run", window, loop_func)
