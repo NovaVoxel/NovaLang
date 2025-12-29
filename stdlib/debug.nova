@@ -1,0 +1,9 @@
+# Nova → Debugging helpers
+
+def assert(cond: bool, msg: str = "Assertion failed"):
+    if not cond:
+        __native__("builtins.print", "[ASSERT] " + msg)
+        __native__("builtins.exit", 1)
+
+def trace(obj):
+    __native__("builtins.print", "[TRACE] " + str(obj))
