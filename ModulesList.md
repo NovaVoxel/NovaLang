@@ -1,5 +1,5 @@
-# ModulesList.nova
-# Every Nova module implemented yet and what it does
+## ModulesList.nova
+Every Nova module implemented yet and what it does
 
 - `math.nova` (std/math)
     - sqrt(x: float) -> float
