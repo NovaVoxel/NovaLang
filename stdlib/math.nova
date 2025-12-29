@@ -1,0 +1,14 @@
+def sqrt(x: float) -> float:
+    __native__("math.sqrt", x)
+
+def sin(x: float) -> float:
+    __native__("math.sin", x)
+
+def cos(x: float) -> float:
+    __native__("math.cos", x)
+
+def pow(x: float, y: float) -> float:
+    __native__("math.pow", x, y)
+
+def log(x: float) -> float:
+    __native__("math.log", x)
