@@ -1,0 +1,58 @@
+name: Build Nova Runtime
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build runtime on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Nuitka + dependencies
+        run: |
+          pip install --upgrade pip
+          pip install nuitka
+          pip install ordered-set zstandard
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y patchelf
+
+      - name: Build runtime
+        working-directory: runtime
+        run: |
+          python -m nuitka --onefile launcher.py
+
+      - name: Rename output
+        working-directory: runtime
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv launcher.exe runtime.exe
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            mv launcher.bin runtime-linux
+          else
+            mv launcher.bin runtime-macos
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-${{ matrix.os }}
+          path: runtime/runtime*

@@ -1,0 +1,57 @@
+name: Build Nova Compiler
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-compiler:
+    name: Build compiler on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Nuitka + dependencies
+        run: |
+          pip install --upgrade pip
+          pip install nuitka ordered-set zstandard
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y patchelf
+
+      - name: Build compiler
+        working-directory: compiler
+        run: |
+          python -m nuitka --onefile novac.py
+
+      - name: Rename output
+        working-directory: compiler
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv novac.exe novac.exe
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            mv novac.bin novac-linux
+          else
+            mv novac.bin novac-macos
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: novac-${{ matrix.os }}
+          path: compiler/novac*

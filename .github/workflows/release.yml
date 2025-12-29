@@ -1,0 +1,64 @@
+name: Nova Release Pipeline
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Build Nova for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Nuitka + dependencies
+        run: |
+          pip install --upgrade pip
+          pip install nuitka ordered-set zstandard
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y patchelf
+
+      - name: Build runtime
+        working-directory: runtime
+        run: |
+          python -m nuitka --onefile launcher.py
+
+      - name: Build compiler
+        working-directory: compiler
+        run: |
+          python -m nuitka --onefile novac.py
+
+      - name: Rename outputs
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv runtime/launcher.exe runtime.exe
+            mv compiler/novac.exe novac.exe
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            mv runtime/launcher.bin runtime-linux
+            mv compiler/novac.bin novac-linux
+          else
+            mv runtime/launcher.bin runtime-macos
+            mv compiler/novac.bin novac-macos
+          fi
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            runtime/runtime*
+            compiler/novac*
+            InstallNovaLang.py
