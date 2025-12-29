@@ -1,0 +1,13 @@
+# Nova → Python os.path
+
+def join(a: str, b: str) -> str:
+    __native__("os.path.join", a, b)
+
+def basename(path: str) -> str:
+    __native__("os.path.basename", path)
+
+def dirname(path: str) -> str:
+    __native__("os.path.dirname", path)
+
+def exists(path: str) -> bool:
+    __native__("os.path.exists", path)
