@@ -1,11 +1,12 @@
+# Nova → Python IO
 def print(*args: any) -> None:
-    __native__("io.print", args)
+    __native__("builtins.print", args)
 
 def input(prompt: str = "") -> str:
-    __native__("io.input", prompt)
+    __native__("builtins.input", prompt)
 
 def read(path: str) -> str:
-    __native__("io.read", path)
+    __native__("io.open", path, "r").read()
 
 def write(path: str, data: str) -> None:
-    __native__("io.write", path, data)
+    __native__("io.open", path, "w").write(data)
