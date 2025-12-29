@@ -1,0 +1,11 @@
+def list() -> list:
+    __native__("collections.list")
+
+def dict() -> dict:
+    __native__("collections.dict")
+
+def set() -> set:
+    __native__("collections.set")
+
+def tuple() -> tuple:
+    __native__("collections.tuple")
