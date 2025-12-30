@@ -15,11 +15,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python: "3.11"
+            python: "3.11.9"
           - os: windows-latest
-            python: "3.11"
+            python: "3.11.9"
           - os: macos-latest
-            python: "3.11"
+            python: "3.11.9"
 
     steps:
       - name: Checkout repository
@@ -51,8 +51,6 @@ jobs:
         working-directory: compiler
         run: |
           python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
-
-      # --- PLATFORM-SPECIFIC RENAME STEPS ---
 
       - name: Rename output (Windows)
         if: matrix.os == 'windows-latest'
