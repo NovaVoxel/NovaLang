@@ -29,12 +29,12 @@ jobs:
           python-version: ${{ matrix.python }}
           architecture: x64
 
-      - name: Force correct Python on Windows
+      - name: Fix Windows PATH
         if: matrix.os == 'windows-latest'
         run: |
           echo "PATH=${{ env.pythonLocation }};${{ env.pythonLocation }}\\Scripts;$PATH" >> $env:GITHUB_ENV
 
-      - name: Remove broken Nuitka PythonPath (Linux)
+      - name: Fix Linux Nuitka PythonPath bug
         if: matrix.os == 'ubuntu-latest'
         run: |
           echo "NUITKA_PYTHONPATH=" >> $GITHUB_ENV
@@ -42,7 +42,7 @@ jobs:
       - name: Install Nuitka + dependencies
         run: |
           pip install --upgrade pip
-          pip install "nuitka==2.2.8" ordered-set zstandard
+          pip install "nuitka==2.4.11" ordered-set zstandard
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
