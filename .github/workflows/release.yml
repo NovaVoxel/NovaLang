@@ -8,6 +8,7 @@ jobs:
   build:
     name: Build Nova for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
         include:
