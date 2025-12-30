@@ -54,7 +54,7 @@ jobs:
       - name: Build runtime
         working-directory: runtime
         run: |
-          python -m nuitka --onefile launcher.py --assume-yes-for-downloads --disable-dll-dependency-cache
+          python -m nuitka --onefile launcher.py --assume-yes-for-downloads
 
       - name: Rename output (Windows)
         if: matrix.os == 'windows-latest'
