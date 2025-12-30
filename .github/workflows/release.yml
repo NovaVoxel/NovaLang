@@ -27,11 +27,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          architecture: x64
 
-      - name: Fix PATH on macOS
-        if: matrix.os == 'macos-latest'
+      - name: Force correct Python on Windows
+        if: matrix.os == 'windows-latest'
         run: |
-          echo "PATH=$(python3 -c 'import sys; print(sys.executable.rsplit(\"/\",1)[0])'):$PATH" >> $GITHUB_ENV
+          echo "PATH=${{ env.pythonLocation }};${{ env.pythonLocation }}\\Scripts;$PATH" >> $env:GITHUB_ENV
 
       - name: Install Nuitka + dependencies
         run: |
@@ -47,12 +48,12 @@ jobs:
       - name: Build runtime
         working-directory: runtime
         run: |
-          python -m nuitka --onefile launcher.py
+          python -m nuitka --onefile launcher.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
       - name: Build compiler
         working-directory: compiler
         run: |
-          python -m nuitka --onefile novac.py
+          python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
       - name: Rename outputs
         run: |
