@@ -13,10 +13,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python: "3.12"
+            python: "3.11"
           - os: windows-latest
-            python: "3.12"
-          # macOS disabled because Nuitka is broken
+            python: "3.11"
+          - os: macos-latest
+            python: "3.11"
 
     steps:
       - name: Checkout repository
@@ -38,25 +39,44 @@ jobs:
           sudo apt update
           sudo apt install -y patchelf
 
+      # -------------------------
+      # BUILD RUNTIME
+      # -------------------------
+
       - name: Build runtime
         working-directory: runtime
         run: |
           python -m nuitka --onefile launcher.py
+
+      # -------------------------
+      # BUILD COMPILER
+      # -------------------------
 
       - name: Build compiler
         working-directory: compiler
         run: |
           python -m nuitka --onefile novac.py
 
+      # -------------------------
+      # RENAME OUTPUTS
+      # -------------------------
+
       - name: Rename outputs
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv runtime/launcher.exe runtime.exe
             mv compiler/novac.exe novac.exe
-          else
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             mv runtime/launcher.bin runtime-linux
             mv compiler/novac.bin novac-linux
+          else
+            mv runtime/launcher.bin runtime-macos
+            mv compiler/novac.bin novac-macos
           fi
+
+      # -------------------------
+      # UPLOAD TO RELEASE
+      # -------------------------
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
