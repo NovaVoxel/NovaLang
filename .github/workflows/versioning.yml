@@ -10,22 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Read version
+      - name: Read version file
         id: version
         run: |
           VERSION=$(cat VERSION)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create tag
+      - name: Create Git tag
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ steps.version.outputs.version }}
+          tag_prefix: ""
+          create_annotated_tag: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -34,3 +36,5 @@ jobs:
           name: Nova ${{ steps.version.outputs.version }}
           body: |
             Automated release for Nova version ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
