@@ -63,21 +63,21 @@ jobs:
           sudo apt install -y patchelf
 
       # ---------------------------------------------------------
-      # Debug PATH folder
+      # Debug cli folder
       # ---------------------------------------------------------
-      - name: Debug PATH folder (Linux)
+      - name: Debug cli folder (Linux)
         if: matrix.os == 'ubuntu-latest'
-        working-directory: PATH
+        working-directory: cli
         run: |
-          echo "PATH directory (Linux):"
+          echo "cli directory (Linux):"
           pwd
           ls -la
 
-      - name: Debug PATH folder (Windows)
+      - name: Debug cli folder (Windows)
         if: matrix.os == 'windows-latest'
-        working-directory: PATH
+        working-directory: cli
         run: |
-          echo "PATH directory (Windows):"
+          echo "cli directory (Windows):"
           pwd
           dir
 
@@ -85,13 +85,13 @@ jobs:
       # Build novac (Compiler)
       # ---------------------------------------------------------
       - name: Build novac
-        working-directory: PATH
+        working-directory: cli
         run: |
-          python -m nuitka --onefile novac.py --assume-yes-for-downloads
+          python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
       - name: Rename novac output (Linux)
         if: matrix.os == 'ubuntu-latest'
-        working-directory: PATH
+        working-directory: cli
         run: mv novac.bin novac-linux
 
       # ---------------------------------------------------------
@@ -101,4 +101,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: novac-${{ matrix.os }}
-          path: PATH/novac*
+          path: cli/novac*
