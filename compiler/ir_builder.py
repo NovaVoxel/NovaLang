@@ -34,7 +34,7 @@ from .ir import (
     OpCode
 )
 
-from .ast import (
+from .nova_ast import (
     FunctionDef,
     Block,
     UseStmt,
