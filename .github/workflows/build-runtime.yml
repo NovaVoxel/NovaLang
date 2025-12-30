@@ -51,23 +51,48 @@ jobs:
           sudo apt update
           sudo apt install -y patchelf
 
-      - name: Build runtime
+      # ---------------------------------------------------------
+      # Build nova-runtime (actual launcher)
+      # ---------------------------------------------------------
+      - name: Build nova-runtime
         working-directory: runtime
         run: |
           python -m nuitka --onefile launcher.py --assume-yes-for-downloads
 
-      - name: Rename output (Windows)
+      - name: Rename nova-runtime output (Windows)
         if: matrix.os == 'windows-latest'
         working-directory: runtime
-        run: mv launcher.exe runtime.exe
+        run: mv launcher.exe nova-runtime.exe
 
-      - name: Rename output (Linux)
+      - name: Rename nova-runtime output (Linux)
         if: matrix.os == 'ubuntu-latest'
         working-directory: runtime
-        run: mv launcher.bin runtime-linux
+        run: mv launcher.bin nova-runtime-linux
 
-      - name: Upload artifact
+      # ---------------------------------------------------------
+      # Build nova CLI wrapper
+      # ---------------------------------------------------------
+      - name: Build nova CLI
+        working-directory: PATH
+        run: |
+          python -m nuitka --onefile nova.py --assume-yes-for-downloads
+
+      - name: Rename nova output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: PATH
+        run: mv nova.bin nova-linux
+
+      # ---------------------------------------------------------
+      # Upload artifacts
+      # ---------------------------------------------------------
+      - name: Upload nova-runtime
         uses: actions/upload-artifact@v4
         with:
-          name: runtime-${{ matrix.os }}
-          path: runtime/runtime*
+          name: nova-runtime-${{ matrix.os }}
+          path: runtime/nova-runtime*
+
+      - name: Upload nova
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-${{ matrix.os }}
+          path: PATH/nova*
