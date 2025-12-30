@@ -45,28 +45,61 @@ jobs:
           sudo apt update
           sudo apt install -y patchelf
 
+      # -------------------------
+      # BUILD RUNTIME
+      # -------------------------
+
       - name: Build runtime
         working-directory: runtime
         run: |
           python -m nuitka --onefile launcher.py --assume-yes-for-downloads --disable-dll-dependency-cache
+
+      # -------------------------
+      # BUILD COMPILER
+      # -------------------------
 
       - name: Build compiler
         working-directory: compiler
         run: |
           python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
-      - name: Rename outputs
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv runtime/launcher.exe runtime.exe
-            mv compiler/novac.exe novac.exe
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            mv runtime/launcher.bin runtime-linux
-            mv compiler/novac.bin novac-linux
-          else
-            mv runtime/launcher.bin runtime-macos
-            mv compiler/novac.bin novac-macos
-          fi
+      # -------------------------
+      # RENAME OUTPUTS (platform-specific)
+      # -------------------------
+
+      - name: Rename runtime (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: runtime
+        run: mv launcher.exe runtime.exe
+
+      - name: Rename runtime (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: runtime
+        run: mv launcher.bin runtime-linux
+
+      - name: Rename runtime (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: runtime
+        run: mv launcher.bin runtime-macos
+
+      - name: Rename compiler (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: compiler
+        run: mv novac.exe novac.exe
+
+      - name: Rename compiler (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: compiler
+        run: mv novac.bin novac-linux
+
+      - name: Rename compiler (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: compiler
+        run: mv novac.bin novac-macos
+
+      # -------------------------
+      # UPLOAD TO RELEASE
+      # -------------------------
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
@@ -75,4 +108,3 @@ jobs:
             runtime/runtime*
             compiler/novac*
             InstallNovaLang.py
-            
