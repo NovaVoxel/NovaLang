@@ -17,7 +17,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
+          architecture: x64
+
+      - name: Force correct Python on Windows
+        run: |
+          echo "PATH=${{ env.pythonLocation }};${{ env.pythonLocation }}\\Scripts;$PATH" >> $env:GITHUB_ENV
 
       - name: Run installer
         run: |
