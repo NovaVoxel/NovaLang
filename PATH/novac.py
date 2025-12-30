@@ -7,8 +7,9 @@ from compiler.lexer import tokenize
 from compiler.parser import parse
 from compiler.ir_builder import build_ir
 from compiler.codegen_nomc import generate_nomc
-from compiler.novar_builder import build_novar
 from compiler.issues import IssueReporter
+
+from novar_builder import build_novar  # dein File aus der Repo-Root
 
 
 def compile_nomc(path: str):
@@ -46,8 +47,11 @@ def compile_nomc(path: str):
         print(f"IR generation failed: {e}")
         sys.exit(1)
 
-    # Output path
-    out_path = path.replace(".nova", ".nomc")
+    # Output path (.nova → .nomc)
+    if path.endswith(".nova"):
+        out_path = path[:-5] + ".nomc"
+    else:
+        out_path = path + ".nomc"
 
     # Codegen
     try:
@@ -56,19 +60,37 @@ def compile_nomc(path: str):
         print(f"Codegen failed: {e}")
         sys.exit(1)
 
-    print(f"Compiled .nova → .nomc: {out_path}")
+    print(f"✅ Compiled .nova → .nomc: {out_path}")
 
 
 def compile_project(project_root: str):
-    """Compile a full project into a .novar archive."""
-    project_name = os.path.basename(os.path.abspath(project_root))
-    result = build_novar(project_name, source_dir=os.path.join(project_root, "nova"))
+    """Compile a full Nova project into a .novar archive."""
+    if not os.path.isdir(project_root):
+        print(f"Error: Project root not found: {project_root}")
+        sys.exit(1)
 
-    if result:
-        print(f"Compiled project → {result}")
-    else:
+    # z.B.:
+    # project_root/
+    #   nova/    -> .nova Sources
+    #   bin/     -> .nomc Output
+    #   target/  -> .novar Output
+    project_name = os.path.basename(os.path.abspath(project_root))
+    source_dir = os.path.join(project_root, "nova")
+    bin_dir = os.path.join(project_root, "bin")
+    target_dir = os.path.join(project_root, "target")
+
+    novar_path = build_novar(
+        project_name=project_name,
+        source_dir=source_dir,
+        bin_dir=bin_dir,
+        target_dir=target_dir,
+    )
+
+    if novar_path is None:
         print("Build failed.")
         sys.exit(1)
+
+    print(f"✅ Compiled project → {novar_path}")
 
 
 def main():
