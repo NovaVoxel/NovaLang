@@ -10,9 +10,16 @@ jobs:
   build-compiler:
     name: Build compiler on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            python: "3.11"
+          - os: windows-latest
+            python: "3.11"
+          - os: macos-latest
+            python: "3.11"
 
     steps:
       - name: Checkout repository
@@ -21,7 +28,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
+          architecture: x64
+
+      - name: Force correct Python on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "PATH=${{ env.pythonLocation }};${{ env.pythonLocation }}\\Scripts;$PATH" >> $env:GITHUB_ENV
 
       - name: Install Nuitka + dependencies
         run: |
@@ -37,7 +50,7 @@ jobs:
       - name: Build compiler
         working-directory: compiler
         run: |
-          python -m nuitka --onefile novac.py
+          python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
       - name: Rename output
         working-directory: compiler
