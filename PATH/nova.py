@@ -1,53 +1,9 @@
-# nova.py — Nova Runtime Loader
+# nova.py — Nova CLI wrapper
+# This file goes into PATH and only forwards commands to the real launcher.
 
 import sys
+import subprocess
 import os
-import tarfile
-import json
-
-from loader import load_nomc, load_novar
-from vm import NovaVM
-
-
-def run_nomc(path: str):
-    if not os.path.exists(path):
-        print(f"Error: File not found: {path}")
-        sys.exit(1)
-
-    bytecode = load_nomc(path)
-    vm = NovaVM()
-    vm.run(bytecode)
-
-
-def run_novar(path: str):
-    if not os.path.exists(path):
-        print(f"Error: File not found: {path}")
-        sys.exit(1)
-
-    # Extract .novar
-    extract_dir = path + "_extracted"
-    os.makedirs(extract_dir, exist_ok=True)
-
-    with tarfile.open(path, "r") as tar:
-        tar.extractall(extract_dir)
-
-    # Load manifest
-    manifest_path = os.path.join(extract_dir, "bin", "Manifest.json")
-    if not os.path.exists(manifest_path):
-        print("Error: Manifest.json missing in .novar")
-        sys.exit(1)
-
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        manifest = json.load(f)
-
-    vm = NovaVM()
-
-    # Execute all .nomc files in order
-    for nomc_path in manifest["bin"]:
-        full_path = os.path.join(extract_dir, nomc_path)
-        bytecode = load_nomc(full_path)
-        vm.run(bytecode)
-
 
 def main():
     if len(sys.argv) < 3:
@@ -57,13 +13,28 @@ def main():
         sys.exit(1)
 
     mode = sys.argv[1]
+    path = sys.argv[2]
 
-    if mode == "-nomc":
-        run_nomc(sys.argv[2])
-    elif mode == "-novar":
-        run_novar(sys.argv[2])
-    else:
-        print(f"Unknown option: {mode}")
+    # Path to the real runtime executable
+    # After Nuitka build: nova-runtime.exe (or just "nova-runtime" on Linux)
+    runtime_exe = os.path.join(os.path.dirname(__file__), "nova-runtime")
+
+    # Windows compatibility
+    if os.name == "nt":
+        runtime_exe += ".exe"
+
+    if not os.path.exists(runtime_exe):
+        print(f"Error: runtime executable not found: {runtime_exe}")
+        sys.exit(1)
+
+    # Forward the call to the runtime
+    cmd = [runtime_exe, mode, path] + sys.argv[3:]
+
+    try:
+        result = subprocess.call(cmd)
+        sys.exit(result)
+    except Exception as e:
+        print(f"Failed to launch runtime: {e}")
         sys.exit(1)
 
 
