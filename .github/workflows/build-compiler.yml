@@ -18,8 +18,8 @@ jobs:
             python: "3.11.9"
           - os: windows-latest
             python: "3.11.9"
-          - os: macos-latest
-            python: "3.11.9"
+         # - os: macos-latest
+         #  python: "3.11.9"
 
     steps:
       - name: Checkout repository
