@@ -51,23 +51,43 @@ jobs:
           sudo apt update
           sudo apt install -y patchelf
 
-      - name: Build compiler
-        working-directory: compiler
+      # ---------------------------------------------------------
+      # Build novac (Compiler)
+      # ---------------------------------------------------------
+      - name: Build novac
+        working-directory: PATH
         run: |
           python -m nuitka --onefile novac.py --assume-yes-for-downloads
 
-      - name: Rename output (Windows)
-        if: matrix.os == 'windows-latest'
-        working-directory: compiler
-        run: mv novac.exe novac.exe
-
-      - name: Rename output (Linux)
+      - name: Rename novac output (Linux)
         if: matrix.os == 'ubuntu-latest'
-        working-directory: compiler
+        working-directory: PATH
         run: mv novac.bin novac-linux
 
-      - name: Upload artifact
+      # ---------------------------------------------------------
+      # Build nova (CLI wrapper)
+      # ---------------------------------------------------------
+      - name: Build nova
+        working-directory: PATH
+        run: |
+          python -m nuitka --onefile nova.py --assume-yes-for-downloads
+
+      - name: Rename nova output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: PATH
+        run: mv nova.bin nova-linux
+
+      # ---------------------------------------------------------
+      # Upload artifacts
+      # ---------------------------------------------------------
+      - name: Upload novac
         uses: actions/upload-artifact@v4
         with:
           name: novac-${{ matrix.os }}
-          path: compiler/novac*
+          path: PATH/novac*
+
+      - name: Upload nova
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-${{ matrix.os }}
+          path: PATH/nova*
