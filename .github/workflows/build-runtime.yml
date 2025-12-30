@@ -39,7 +39,7 @@ jobs:
       - name: Install Nuitka + dependencies
         run: |
           pip install --upgrade pip
-          pip install nuitka ordered-set zstandard
+          pip install "nuitka==2.3.8" ordered-set zstandard
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
