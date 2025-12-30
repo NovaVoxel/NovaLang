@@ -18,8 +18,8 @@ jobs:
             python: "3.11.9"
           - os: windows-latest
             python: "3.11.9"
-        #  - os: macos-latest
-        #    python: "3.11.9"
+          - os: macos-latest
+            python: "3.11.9"
 
     steps:
       - name: Checkout repository
@@ -35,6 +35,10 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           echo "PATH=${{ env.pythonLocation }};${{ env.pythonLocation }}\\Scripts;$PATH" >> $env:GITHUB_ENV
+
+      - name: Fix Nuitka PythonPath bug on Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: unset NUITKA_PYTHONPATH
 
       - name: Install Nuitka + dependencies
         run: |
