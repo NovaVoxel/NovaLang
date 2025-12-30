@@ -20,9 +20,17 @@ jobs:
             python: "3.11.9"
 
     steps:
+      # ---------------------------------------------------------
+      # Checkout (mit fetch-depth 0, sonst Snapshot-Probleme)
+      # ---------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # ---------------------------------------------------------
+      # Python Setup
+      # ---------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -40,6 +48,9 @@ jobs:
           echo "NUITKA_PYTHONPATH=" >> $GITHUB_ENV
           unset NUITKA_PYTHONPATH || true
 
+      # ---------------------------------------------------------
+      # Install Dependencies
+      # ---------------------------------------------------------
       - name: Install Nuitka + dependencies
         run: |
           pip install --upgrade pip
@@ -52,7 +63,26 @@ jobs:
           sudo apt install -y patchelf
 
       # ---------------------------------------------------------
-      # Build nova-runtime (actual launcher)
+      # Debug runtime folder
+      # ---------------------------------------------------------
+      - name: Debug runtime folder (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: runtime
+        run: |
+          echo "runtime directory (Linux):"
+          pwd
+          ls -la
+
+      - name: Debug runtime folder (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: runtime
+        run: |
+          echo "runtime directory (Windows):"
+          pwd
+          dir
+
+      # ---------------------------------------------------------
+      # Build nova-runtime (launcher)
       # ---------------------------------------------------------
       - name: Build nova-runtime
         working-directory: runtime
@@ -70,7 +100,26 @@ jobs:
         run: mv launcher.bin nova-runtime-linux
 
       # ---------------------------------------------------------
-      # Build nova CLI wrapper
+      # Debug PATH folder
+      # ---------------------------------------------------------
+      - name: Debug PATH folder (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: PATH
+        run: |
+          echo "PATH directory (Linux):"
+          pwd
+          ls -la
+
+      - name: Debug PATH folder (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: PATH
+        run: |
+          echo "PATH directory (Windows):"
+          pwd
+          dir
+
+      # ---------------------------------------------------------
+      # Build nova CLI
       # ---------------------------------------------------------
       - name: Build nova CLI
         working-directory: PATH
