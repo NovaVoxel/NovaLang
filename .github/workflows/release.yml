@@ -28,6 +28,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Fix PATH on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "PATH=$(python3 -c 'import sys; print(sys.executable.rsplit(\"/\",1)[0])'):$PATH" >> $GITHUB_ENV
+
       - name: Install Nuitka + dependencies
         run: |
           pip install --upgrade pip
@@ -39,27 +44,15 @@ jobs:
           sudo apt update
           sudo apt install -y patchelf
 
-      # -------------------------
-      # BUILD RUNTIME
-      # -------------------------
-
       - name: Build runtime
         working-directory: runtime
         run: |
           python -m nuitka --onefile launcher.py
 
-      # -------------------------
-      # BUILD COMPILER
-      # -------------------------
-
       - name: Build compiler
         working-directory: compiler
         run: |
           python -m nuitka --onefile novac.py
-
-      # -------------------------
-      # RENAME OUTPUTS
-      # -------------------------
 
       - name: Rename outputs
         run: |
@@ -73,10 +66,6 @@ jobs:
             mv runtime/launcher.bin runtime-macos
             mv compiler/novac.bin novac-macos
           fi
-
-      # -------------------------
-      # UPLOAD TO RELEASE
-      # -------------------------
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
