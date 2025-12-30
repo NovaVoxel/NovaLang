@@ -52,16 +52,22 @@ jobs:
         run: |
           python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
-      - name: Rename output
+      # --- PLATFORM-SPECIFIC RENAME STEPS ---
+
+      - name: Rename output (Windows)
+        if: matrix.os == 'windows-latest'
         working-directory: compiler
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv novac.exe novac.exe
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            mv novac.bin novac-linux
-          else
-            mv novac.bin novac-macos
-          fi
+        run: mv novac.exe novac.exe
+
+      - name: Rename output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: compiler
+        run: mv novac.bin novac-linux
+
+      - name: Rename output (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: compiler
+        run: mv novac.bin novac-macos
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
