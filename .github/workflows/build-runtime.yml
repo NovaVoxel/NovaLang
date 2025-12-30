@@ -52,16 +52,20 @@ jobs:
         run: |
           python -m nuitka --onefile launcher.py --assume-yes-for-downloads --disable-dll-dependency-cache
 
-      - name: Rename output
+      - name: Rename output (Windows)
+        if: matrix.os == 'windows-latest'
         working-directory: runtime
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv launcher.exe runtime.exe
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            mv launcher.bin runtime-linux
-          else
-            mv launcher.bin runtime-macos
-          fi
+        run: mv launcher.exe runtime.exe
+
+      - name: Rename output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: runtime
+        run: mv launcher.bin runtime-linux
+
+      - name: Rename output (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: runtime
+        run: mv launcher.bin runtime-macos
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
