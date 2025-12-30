@@ -16,8 +16,8 @@ jobs:
             python: "3.11"
           - os: windows-latest
             python: "3.11"
-          - os: macos-latest
-            python: "3.11"
+         # - os: macos-latest
+         #  python: "3.11"
 
     steps:
       - name: Checkout repository
