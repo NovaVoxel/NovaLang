@@ -9,7 +9,7 @@ from compiler.ir_builder import build_ir
 from compiler.codegen_nomc import generate_nomc
 from compiler.issues import IssueReporter
 
-from novar_builder import build_novar  # dein File aus der Repo-Root
+from novar_builder import build_novar  
 
 
 def compile_nomc(path: str):
