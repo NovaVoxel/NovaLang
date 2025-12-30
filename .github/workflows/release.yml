@@ -16,8 +16,7 @@ jobs:
             python: "3.12"
           - os: windows-latest
             python: "3.12"
-          - os: macos-latest
-            python: "3.11"   # FIX: Nuitka + macOS + Python 3.12 = broken
+          # macOS disabled because Nuitka is broken
 
     steps:
       - name: Checkout repository
@@ -54,12 +53,9 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv runtime/launcher.exe runtime.exe
             mv compiler/novac.exe novac.exe
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          else
             mv runtime/launcher.bin runtime-linux
             mv compiler/novac.bin novac-linux
-          else
-            mv runtime/launcher.bin runtime-macos
-            mv compiler/novac.bin novac-macos
           fi
 
       - name: Upload to release
