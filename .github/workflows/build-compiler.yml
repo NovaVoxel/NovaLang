@@ -87,7 +87,7 @@ jobs:
       - name: Build novac
         working-directory: cli
         run: |
-          python -m nuitka --onefile novac.py --assume-yes-for-downloads --disable-dll-dependency-cache
+          python -m nuitka --onefile novac.py --assume-yes-for-downloads
 
       - name: Rename novac output (Linux)
         if: matrix.os == 'ubuntu-latest'
