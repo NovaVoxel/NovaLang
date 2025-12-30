@@ -23,7 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # WICHTIG: verhindert Release-Snapshot-Probleme
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -54,12 +54,12 @@ jobs:
           sudo apt install -y patchelf
 
       # ---------------------------------------------------------
-      # Debug: Zeige Dateien im Compiler-Ordner
+      # Debug: Zeige Dateien im PATH-Ordner
       # ---------------------------------------------------------
-      - name: Debug compiler folder
-        working-directory: compiler
+      - name: Debug PATH folder
+        working-directory: PATH
         run: |
-          echo "Compiler directory:"
+          echo "PATH directory:"
           pwd
           ls -la
 
@@ -67,26 +67,26 @@ jobs:
       # Build novac (Compiler)
       # ---------------------------------------------------------
       - name: Build novac
-        working-directory: compiler
+        working-directory: PATH
         run: |
           python -m nuitka --onefile novac.py --assume-yes-for-downloads
 
       - name: Rename novac output (Linux)
         if: matrix.os == 'ubuntu-latest'
-        working-directory: compiler
+        working-directory: PATH
         run: mv novac.bin novac-linux
 
       # ---------------------------------------------------------
       # Build nova (CLI wrapper)
       # ---------------------------------------------------------
       - name: Build nova
-        working-directory: compiler
+        working-directory: PATH
         run: |
           python -m nuitka --onefile nova.py --assume-yes-for-downloads
 
       - name: Rename nova output (Linux)
         if: matrix.os == 'ubuntu-latest'
-        working-directory: compiler
+        working-directory: PATH
         run: mv nova.bin nova-linux
 
       # ---------------------------------------------------------
@@ -96,10 +96,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: novac-${{ matrix.os }}
-          path: compiler/novac*
+          path: PATH/novac*
 
       - name: Upload nova
         uses: actions/upload-artifact@v4
         with:
           name: nova-${{ matrix.os }}
-          path: compiler/nova*
+          path: PATH/nova*
